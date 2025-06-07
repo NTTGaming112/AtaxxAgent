@@ -40,8 +40,6 @@ def evaluate(state, player):
             return 1.0
         elif state.current_player == -player:
             return 0
-        else:
-            return 0.5
         
     own = np.sum(state.board == player)
     opp = np.sum(state.board == -player)

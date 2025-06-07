@@ -51,7 +51,7 @@ class MCTSNode:
             if self.node_player == root_player:
                 self.wins += result
             else:
-                self.wins -= result
+                self.wins += 1 - result
             self = self.parent
 
 class MCTSAgent:
