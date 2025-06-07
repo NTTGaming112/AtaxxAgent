@@ -86,9 +86,9 @@ def read_map_file(filename):
     return board
 
 class AtaxxGame:
-    def __init__(self, games_per_match=5, iterations=300, algo1="MCTS_Domain_600", 
+    def __init__(self, games_per_match=5, iterations=300, depths=4, algo1="MCTS_Domain_600", 
              algo2="Minimax+AB", display="pygame", map_file=None, delay=0.5, first_player='W',
-             use_tournament=True, transition_threshold=13):
+             use_tournament=True, transition_threshold=18):
         self.available_maps = get_available_maps()
         self.map_file = map_file if map_file in self.available_maps else self.available_maps[0] if self.available_maps else None
         self.games_per_match = games_per_match
@@ -98,18 +98,19 @@ class AtaxxGame:
         self.first_player = 1 if first_player == 'W' else -1
         self.use_tournament = use_tournament
         self.transition_threshold = transition_threshold
+        self.depths = depths
         
         if self.display not in ['pygame', 'terminal']:
             raise ValueError("Display must be 'pygame' or 'terminal'")
         
         self.agents = {
-            "Minimax+AB": MinimaxAgent(max_depth=4),
-            "MCTS_300": MCTSAgent(iterations=iterations),
-            "MCTS_Domain_300": MCTSDomainAgent(iterations=iterations, tournament=self.use_tournament),
-            "MCTS_Domain_600": MCTSDomainAgent(iterations=max(self.iterations, 600), tournament=self.use_tournament),
+            "Minimax+AB": MinimaxAgent(max_depth=self.depths),
+            "MCTS_300": MCTSAgent(iterations=self.iterations),
+            "MCTS_Domain_300": MCTSDomainAgent(iterations=self.iterations, tournament=self.use_tournament),
+            "MCTS_Domain_600": MCTSDomainAgent(iterations=self.iterations, tournament=self.use_tournament),
             "AB+MCTS_Domain_600": ABMCTSDomainAgent(
-                iterations=max(self.iterations, 600), 
-                ab_depth=4, 
+                iterations=self.iterations,
+                ab_depth=self.depths,
                 transition_threshold=self.transition_threshold,
                 tournament=self.use_tournament
             )
@@ -1527,6 +1528,7 @@ def parse_args():
     parser.add_argument("--first_player", type=str, default="W", help="First player (White or Black)")
     parser.add_argument("--use_tournament", type=bool, default=False, help="Use tournament selection for MCTS Domain")
     parser.add_argument("--transition_threshold", type=int, default=13, help="Transition threshold for AB+MCTS Domain")
+    parser.add_argument("--depths", type=int, default=4, help="Search depths for Minimax and AB")
     return parser.parse_args()
 
 async def main():
@@ -1542,7 +1544,8 @@ async def main():
             delay=args.delay,
             first_player=args.first_player,
             use_tournament=args.use_tournament,
-            transition_threshold=args.transition_threshold
+            transition_threshold=args.transition_threshold,
+            depths=args.depths
         )
         game.init_pygame()
         await game.run_tournament()

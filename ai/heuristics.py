@@ -1,5 +1,5 @@
 import numpy as np
-from constants import ALPHA, BETA, BOARD_SIZE, EMPTY, PLAYER_1, PLAYER_2, S1, S2, S3, S4
+from constants import BOARD_SIZE, S1, S2, S3, S4
 
 def heuristic(move, state, player):
     r, c, nr, nc = move
@@ -35,11 +35,6 @@ def heuristic(move, state, player):
     return S1 * captured + S2 * allies + S3 * bonus_clone - S4 * penalty_jump
 
 def evaluate(state, player):
-    # own = np.sum(state.board == player)
-    # opp = np.sum(state.board == -player)
-    # diff = own / (own + opp)
-    # score = ALPHA + BETA * diff
-    # return score
     if state.is_game_over():
         if state.current_player == player:
             return 1.0
