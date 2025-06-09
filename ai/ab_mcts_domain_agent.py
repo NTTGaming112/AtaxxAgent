@@ -10,7 +10,7 @@ class ABMCTSDomainAgent:
     def get_move(self, state):
         empty_cells = state.get_empty_cells()
         
-        if empty_cells > self.transition_threshold:
+        if empty_cells < self.transition_threshold:
             return self.ab_agent.get_move(state)
         else:
             return self.mcts_agent.get_move(state) 

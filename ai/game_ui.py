@@ -87,7 +87,7 @@ class AtaxxGameUI:
         self.available_maps = get_available_maps()
         self.available_games = [1, 3, 5, 10, 20, 50]
         self.available_iterations = [100, 300, 600, 1200, 2400]
-        self.available_delays = [0, 0.1, 0.5, 1.0, 2.0]
+        self.available_delays = [0, 0.5, 1.0, 2.0, 3.0, 5.0]
         self.available_depths = [2, 3, 4]
         self.available_transitions = [10, 13, 18, 20, 23]
         
@@ -203,8 +203,8 @@ class AtaxxGameUI:
             elif particle['y'] > screen_height:
                 particle['y'] = 0
 
-    def draw_board(self, state=None):
-        """Draw the game board"""
+    def draw_board(self, state=None, last_move=None):
+        """Draw the game board with optional move highlighting"""
         if not PYGAME_AVAILABLE or self.display != 'pygame':
             return None
             
@@ -250,14 +250,44 @@ class AtaxxGameUI:
                 y = self.board_y + row * self.cell_size
                 cell_rect = pygame.Rect(x, y, self.cell_size, self.cell_size)
                 
-                # Cell background
+                # Check if this cell is part of the last move
+                is_source = last_move and (row, col) == (last_move[0], last_move[1])
+                is_destination = last_move and (row, col) == (last_move[2], last_move[3])
+                
+                # Cell background with move highlighting
                 if board[row][col] == -2:  # Blocked cell
                     pygame.draw.rect(self.screen, COLORS['blocked'], cell_rect)
                 else:
-                    pygame.draw.rect(self.screen, COLORS['empty'], cell_rect)
+                    # Highlight move cells
+                    if is_source:
+                        # Source cell - yellow highlight
+                        pygame.draw.rect(self.screen, (255, 255, 150), cell_rect)
+                    elif is_destination:
+                        # Destination cell - green highlight
+                        pygame.draw.rect(self.screen, (150, 255, 150), cell_rect)
+                    else:
+                        pygame.draw.rect(self.screen, COLORS['empty'], cell_rect)
                 
                 # Grid lines
                 pygame.draw.rect(self.screen, COLORS['grid'], cell_rect, 1)
+                
+                # Add move indicators for source and destination
+                if is_source:
+                    # Draw arrow or indicator for source
+                    pygame.draw.rect(self.screen, (255, 200, 0), cell_rect, 4)
+                    # Draw "FROM" text
+                    font_small = pygame.font.SysFont('Arial', 10, bold=True)
+                    from_text = font_small.render("FROM", True, (255, 100, 0))
+                    from_rect = from_text.get_rect(center=(x + self.cell_size // 2, y + 8))
+                    self.screen.blit(from_text, from_rect)
+                elif is_destination:
+                    # Draw thick border for destination
+                    pygame.draw.rect(self.screen, (0, 200, 0), cell_rect, 4)
+                    # Draw "TO" text
+                    font_small = pygame.font.SysFont('Arial', 10, bold=True)
+                    to_text = font_small.render("TO", True, (0, 150, 0))
+                    to_rect = to_text.get_rect(center=(x + self.cell_size // 2, y + 8))
+                    self.screen.blit(to_text, to_rect)
                 
                 # Pieces
                 if board[row][col] == 1:  # X piece (Red)
@@ -295,6 +325,24 @@ class AtaxxGameUI:
                 f"O Pieces: {o_pieces}",
                 f"Empty Cells: {empty_cells}",
                 "",
+                "Last Move:" if last_move else "Game Started",
+            ]
+            
+            # Add last move details if available
+            if last_move:
+                r, c, nr, nc = last_move
+                is_clone = abs(r - nr) <= 1 and abs(c - nc) <= 1
+                move_type = "Clone" if is_clone else "Jump"
+                stats.extend([
+                    f"  From: ({r},{c})",
+                    f"  To: ({nr},{nc})",
+                    f"  Type: {move_type}",
+                    ""
+                ])
+            else:
+                stats.append("")
+            
+            stats.extend([
                 "Tournament Progress:",
                 f"{self.tournament.algo1}:",
                 f"  W: {self.tournament.results[self.tournament.algo1]['wins']}",
@@ -304,7 +352,7 @@ class AtaxxGameUI:
                 f"  W: {self.tournament.results[self.tournament.algo2]['wins']}",
                 f"  L: {self.tournament.results[self.tournament.algo2]['losses']}",
                 f"  D: {self.tournament.results[self.tournament.algo2]['draws']}"
-            ]
+            ])
             
             for i, stat in enumerate(stats):
                 if stat:  # Skip empty strings
@@ -437,92 +485,6 @@ class AtaxxGameUI:
         pygame.display.flip()
         
         return {'menu_button': menu_rect, 'new_button': new_rect}
-    
-    def draw_menu(self):
-        """Draw the main menu interface"""
-        if not PYGAME_AVAILABLE or self.display != 'pygame':
-            return None
-            
-        # Clear screen with animated background
-        self.draw_gradient_rect(self.screen, pygame.Rect(0, 0, self.screen_width, self.screen_height),
-                              COLORS['bg'], (COLORS['bg'][0]+15, COLORS['bg'][1]+15, COLORS['bg'][2]+15))
-        
-        # Draw animated particles
-        self.draw_particles_background()
-        
-        # Main title
-        title_font = pygame.font.SysFont('Segoe UI', 48, bold=True)
-        title_surface = title_font.render("ATAXX TOURNAMENT", True, COLORS['text'])
-        title_rect = title_surface.get_rect(center=(self.screen_width//2, 150))
-        
-        # Title shadow
-        shadow_surface = title_font.render("ATAXX TOURNAMENT", True, COLORS['text_dark'])
-        shadow_rect = shadow_surface.get_rect(center=(self.screen_width//2 + 3, 153))
-        self.screen.blit(shadow_surface, shadow_rect)
-        self.screen.blit(title_surface, title_rect)
-        
-        # Subtitle
-        subtitle_text = f"{self.tournament.algo1} vs {self.tournament.algo2}"
-        subtitle_surface = self.font_large.render(subtitle_text, True, COLORS['accent'])
-        subtitle_rect = subtitle_surface.get_rect(center=(self.screen_width//2, 200))
-        self.screen.blit(subtitle_surface, subtitle_rect)
-        
-        # Tournament settings panel
-        panel_width = 600
-        panel_height = 300
-        panel_x = self.screen_width//2 - panel_width//2
-        panel_y = 250
-        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
-        
-        self.draw_shadow(self.screen, panel_rect, 8)
-        self.draw_gradient_rect(self.screen, panel_rect, COLORS['panel'], COLORS['panel_light'])
-        pygame.draw.rect(self.screen, COLORS['panel'], panel_rect, border_radius=20)
-        pygame.draw.rect(self.screen, COLORS['accent'], panel_rect, 3, border_radius=20)
-        
-        # Settings info
-        settings_y = panel_y + 30
-        settings = [
-            f"🎮 Games per Match: {self.tournament.games_per_match}",
-            f"🧠 MCTS Iterations: {self.tournament.iterations}",
-            f"⏱️ Move Delay: {self.tournament.delay}s",
-            f"🎯 First Player: {'White (O)' if self.tournament.first_player == 'W' else 'Black (X)'}",
-            f"🔍 Minimax Depth: {self.tournament.depths}",
-            f"🔄 Transition Threshold: {self.tournament.transition_threshold}"
-        ]
-        
-        for i, setting in enumerate(settings):
-            setting_surface = self.font.render(setting, True, COLORS['text'])
-            self.screen.blit(setting_surface, (panel_x + 30, settings_y + i * 35))
-        
-        # Start button
-        button_width = 300
-        button_height = 60
-        button_x = self.screen_width//2 - button_width//2
-        button_y = panel_y + panel_height + 40
-        start_rect = pygame.Rect(button_x, button_y, button_width, button_height)
-        
-        mouse_pos = pygame.mouse.get_pos()
-        self.draw_button(self.screen, start_rect, "🚀 START TOURNAMENT", mouse_pos, COLORS['success'])
-        
-        # Control instructions
-        instructions = [
-            "🎮 Controls:",
-            "ESC - Exit",
-            "F11 - Toggle Fullscreen",
-            "← → - Navigate Maps",
-            "SPACE - Pause/Resume (during game)"
-        ]
-        
-        instr_y = button_y + 100
-        for i, instruction in enumerate(instructions):
-            color = COLORS['accent'] if i == 0 else COLORS['text']
-            font = self.font if i == 0 else self.font_small
-            instr_surface = font.render(instruction, True, color)
-            instr_rect = instr_surface.get_rect(center=(self.screen_width//2, instr_y + i * 25))
-            self.screen.blit(instr_surface, instr_rect)
-        
-        pygame.display.flip()
-        return start_rect
 
     def draw_button(self, surface, rect, text, mouse_pos, base_color):
         """Draw a button with hover effects"""
@@ -577,11 +539,11 @@ class AtaxxGameUI:
         
         mouse_pos = pygame.mouse.get_pos()
         
-        # Main settings panel - compact single column
-        panel_width = min(650, self.screen_width - 100)
-        panel_height = min(420, self.screen_height - 180)
+        # Main settings panel - expanded size for better spacing
+        panel_width = min(750, self.screen_width - 80)
+        panel_height = min(480, self.screen_height - 160)
         panel_x = self.screen_width//2 - panel_width//2
-        panel_y = 120
+        panel_y = 110
         panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
         
         self.draw_shadow(self.screen, panel_rect, 8)
@@ -589,14 +551,15 @@ class AtaxxGameUI:
         pygame.draw.rect(self.screen, COLORS['panel'], panel_rect, border_radius=15)
         pygame.draw.rect(self.screen, COLORS['accent'], panel_rect, 3, border_radius=15)
         
-        # Settings layout - single column with navigation buttons
-        settings_x = panel_x + 30
-        col_width = panel_width - 60
+        # Settings layout - single column with better spacing
+        settings_x = panel_x + 40
+        col_width = panel_width - 80
         
-        settings_y = panel_y + 30
-        row_height = 42
-        value_width = 180
-        button_width = 25
+        settings_y = panel_y + 35
+        row_height = 50  # Increased row height for better spacing
+        label_width = 200  # Fixed label width
+        value_width = 200  # Increased value field width
+        button_width = 30  # Slightly larger navigation buttons
         
         # Settings data
         settings_data = [
@@ -604,6 +567,7 @@ class AtaxxGameUI:
             ("🤖 Player 2:", self.selected_algo2, self.available_agents, 'algo2'),
             ("🗺️  Map:", self.selected_map, self.available_maps, 'map'),
             ("🎮 Games:", self.selected_games, self.available_games, 'games'),
+            ("⏱️ Move Delay:", f"{self.selected_delay}s", [f"{d}s" for d in self.available_delays], 'delay'),
             ("🎯 First Player:", "X" if self.selected_first_player == 1 else "O", ["X", "O"], 'first_player'),
             ("🔍 Minimax Depth:", self.selected_depths, self.available_depths, 'depths'),
             ("🔄 Transition Threshold:", self.selected_transition, self.available_transitions, 'transition'),
@@ -615,19 +579,19 @@ class AtaxxGameUI:
         
         # Draw settings with navigation buttons
         for i, (label, value, options, key) in enumerate(settings_data):
-            x = settings_x
             y = settings_y + i * row_height
             
-            # Label
+            # Label aligned to left
             label_surface = self.font.render(label, True, COLORS['text'])
-            self.screen.blit(label_surface, (x, y))
+            self.screen.blit(label_surface, (settings_x, y + 10))  # Left aligned
             
-            # Control area
-            control_x = x + 180
+            # Control area aligned to right side of panel
+            control_width = value_width + button_width * 2 + 50  # Total width needed for controls
+            control_x = settings_x + col_width - control_width  # Right aligned
             
             # Special handling for iterations input field
             if options == 'INPUT' and key == 'iterations':
-                input_rect = pygame.Rect(control_x, y - 3, value_width, 30)
+                input_rect = pygame.Rect(control_x, y + 5, value_width, 35)  # Larger input field
                 is_active = self.iterations_input_active
                 
                 # Input field background
@@ -639,15 +603,15 @@ class AtaxxGameUI:
                 # Input text
                 display_text = self.iterations_input_text if is_active else str(value)
                 text_surface = self.font_small.render(display_text, True, COLORS['text'])
-                text_rect = text_surface.get_rect(midleft=(input_rect.x + 10, input_rect.centery))
+                text_rect = text_surface.get_rect(midleft=(input_rect.x + 12, input_rect.centery))
                 self.screen.blit(text_surface, text_rect)
                 
                 # Cursor for active input
                 if is_active and pygame.time.get_ticks() % 1000 < 500:
                     cursor_x = text_rect.right + 2
                     pygame.draw.line(self.screen, COLORS['text'], 
-                                   (cursor_x, input_rect.y + 6), 
-                                   (cursor_x, input_rect.bottom - 6), 2)
+                                   (cursor_x, input_rect.y + 8), 
+                                   (cursor_x, input_rect.bottom - 8), 2)
                 
                 clickable_areas[key] = {
                     'main_rect': input_rect,
@@ -656,10 +620,10 @@ class AtaxxGameUI:
                     'options': 'INPUT'
                 }
             else:
-                # Navigation buttons for other settings
-                left_button = pygame.Rect(control_x - 35, y - 3, button_width, 30)
-                value_rect = pygame.Rect(control_x, y - 3, value_width, 30)
-                right_button = pygame.Rect(control_x + value_width + 10, y - 3, button_width, 30)
+                # Navigation buttons for other settings - positioned correctly after label
+                left_button = pygame.Rect(control_x - 40, y + 5, button_width, 35)
+                value_rect = pygame.Rect(control_x, y + 5, value_width, 35)
+                right_button = pygame.Rect(control_x + value_width + 15, y + 5, button_width, 35)
                 
                 # Left button
                 left_color = COLORS['accent'] if left_button.collidepoint(mouse_pos) else COLORS['panel_light']
@@ -805,19 +769,6 @@ class AtaxxGameUI:
         print(f"✅ Tournament settings applied successfully")
         print(f"🔄 Ready to start fresh tournament")
 
-    def reset_to_defaults(self):
-        """Reset all settings to defaults"""
-        self.selected_algo1 = "MCTS_Domain_600"
-        self.selected_algo2 = "Minimax+AB"
-        self.selected_games = 5
-        self.selected_iterations = 600
-        self.selected_delay = 0.5
-        self.selected_first_player = 1
-        self.selected_depths = 4
-        self.selected_transition = 13
-        self.selected_map = "position_00"
-        self.selected_use_tournament = False  # Reset tournament selection
-
     def toggle_fullscreen(self):
         """Toggle fullscreen mode"""
         if not PYGAME_AVAILABLE:
@@ -832,8 +783,15 @@ class AtaxxGameUI:
         # Update screen dimensions
         self.screen_width, self.screen_height = self.screen.get_size()
         
-        # Recalculate board positioning
-        self.board_size = min(self.screen_width, self.screen_height) - 200
+        # Recalculate board positioning with larger board in fullscreen
+        if self.fullscreen:
+            # Use smaller margin in fullscreen for larger board
+            margin = 120  # Reduced from 200 to make board bigger
+        else:
+            # Use normal margin in windowed mode
+            margin = 200
+            
+        self.board_size = min(self.screen_width, self.screen_height) - margin
         self.cell_size = self.board_size // 7
         self.board_x = (self.screen_width - self.board_size) // 2
         self.board_y = 80
@@ -938,14 +896,14 @@ class AtaxxGameUI:
                     state.make_move(move)
                     move_count += 1
                     
-                    # Update UI with new board state
+                    # Update UI with new board state, highlighting the last move
                     if self.display == 'pygame' and PYGAME_AVAILABLE:
-                        self.draw_board(state)
+                        self.draw_board(state, last_move=move)
                     
                     x_pieces = np.sum(state.board == 1)
                     o_pieces = np.sum(state.board == -1)
                     
-                    # Add delay if specified
+                    # Add delay if specified - this gives time to see the move highlighting
                     if self.tournament.delay > 0:
                         await asyncio.sleep(self.tournament.delay)
                 else:
@@ -1042,12 +1000,7 @@ class AtaxxGameUI:
                 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F11:
-                        self.fullscreen = not self.fullscreen
-                        if self.fullscreen:
-                            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-                        else:
-                            self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-                        self.screen_width, self.screen_height = self.screen.get_size()
+                        self.toggle_fullscreen()
                     elif event.key == pygame.K_ESCAPE:
                         if self.fullscreen:
                             self.fullscreen = False
@@ -1200,6 +1153,12 @@ class AtaxxGameUI:
             new_index = (current_index + direction) % len(self.available_transitions)
             self.selected_transition = self.available_transitions[new_index]
             print(f"  New transition_threshold: {self.selected_transition}")
+        
+        elif key == 'delay':
+            current_index = self.available_delays.index(self.selected_delay)
+            new_index = (current_index + direction) % len(self.available_delays)
+            self.selected_delay = self.available_delays[new_index]
+            print(f"  New delay: {self.selected_delay}s")
         
         elif key == 'use_tournament':
             # Toggle between Yes and No
