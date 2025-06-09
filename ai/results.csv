@@ -1,0 +1,17 @@
+Timestamp,Agent,Wins,Losses,Draws,AvgPieces,TotalGames,Map,Opponent,MatchID,Depth,Iterations
+2025-06-08 01:45:27,Minimax+AB,1,9,0,22.7,10,Map_3_position_03_3_empty_b,MCTS,Minimax+AB_vs_MCTS_Map_3_position_03_3_empty_b_2025-06-08_01-45-27,,
+2025-06-08 01:45:27,MCTS,9,1,0,26.3,10,Map_3_position_03_3_empty_b,Minimax+AB,Minimax+AB_vs_MCTS_Map_3_position_03_3_empty_b_2025-06-08_01-45-27,,
+,MCTS_Domain_600,5,5,0,,10,Map_14_position_01_5_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,5,5,0,,10,Map_14_position_01_5_empty_w,MCTS_Domain_600,,4.0,600.0
+,Minimax+AB,5,5,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,5,5,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,4,6,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,6,4,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,MCTS_Domain_600,5,5,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,5,5,0,,10,Map_1_position_18_7_empty_w,MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,7,3,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,3,7,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,8,2,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,2,8,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,8,2,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,2,8,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
