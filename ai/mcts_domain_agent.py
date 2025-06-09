@@ -158,9 +158,9 @@ class MCTSDomainAgent:
         tournament_total = iterations * 4 // 10
         
         self.tournament_params = tournament_params if tournament_params else [
-            {'num_sim': tournament_total // 4, 'top_k': 5},      
-            {'num_sim': tournament_total, 'top_k': 3},      
-            {'num_sim': tournament_total // 2, 'top_k': 1}  
+            {'num_sim': tournament_total, 'top_k': 5},      
+            {'num_sim': tournament_total * 3 // 10, 'top_k': 3},     
+            {'num_sim': tournament_total * 7 // 10, 'top_k': 1}  
         ]
         self.tournament = tournament
 

@@ -69,3 +69,9 @@ Timestamp,Agent,Wins,Losses,Draws,AvgPieces,TotalGames,Map,Opponent,MatchID,Dept
 ,AB+MCTS_Domain_600,6,4,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
 ,Minimax+AB,3,7,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
 ,AB+MCTS_Domain_600,7,3,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,4,6,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,6,4,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,1,9,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,9,1,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
+,Minimax+AB,2,8,0,,10,Map_1_position_18_7_empty_w,AB+MCTS_Domain_600,,4.0,600.0
+,AB+MCTS_Domain_600,8,2,0,,10,Map_1_position_18_7_empty_w,Minimax+AB,,4.0,600.0
