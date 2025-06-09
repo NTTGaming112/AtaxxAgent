@@ -1290,16 +1290,16 @@ async def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Ataxx Tournament Runner')
-    parser.add_argument('--map-file', type=str, help='Path to map file')
+    parser.add_argument('--map_file', type=str, help='Path to map file')
     parser.add_argument('--games', type=int, default=5, help='Number of games per match')
     parser.add_argument('--iterations', type=int, default=600, help='MCTS iterations')
     parser.add_argument('--algo1', type=str, default="MCTS_Domain_600", help='First algorithm')
     parser.add_argument('--algo2', type=str, default="Minimax+AB", help='Second algorithm')
-    parser.add_argument('--display', type=str, default='pygame', choices=['pygame', 'terminal'], help='Display mode')
+    parser.add_argument('--display', type=str, default='terminal', choices=['pygame', 'terminal'], help='Display mode')
     parser.add_argument('--delay', type=float, default=0.5, help='Delay between moves')
-    parser.add_argument('--first-player', type=str, default='X', choices=['X', 'W'], help='First player')
-    parser.add_argument('--use-tournament', action='store_true', help='Use tournament mode')
-    parser.add_argument('--transition-threshold', type=int, default=13, help='Transition threshold')
+    parser.add_argument('--first_player', type=str, default='X', choices=['X', 'W'], help='First player')
+    parser.add_argument('--use_tournament', action='store_true', help='Use tournament mode')
+    parser.add_argument('--transition_threshold', type=int, default=13, help='Transition threshold')
     parser.add_argument('--depths', type=int, default=4, help='Minimax depth')
     
     args = parser.parse_args()

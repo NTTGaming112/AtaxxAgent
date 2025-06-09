@@ -11,11 +11,13 @@ class AtaxxState:
             self.board = initial_board.copy()
 
         self.current_player = current_player
+        self.state_history = []
 
     def copy(self):
         new_state = AtaxxState()
         new_state.board = self.board.copy()
         new_state.current_player = self.current_player
+        new_state.state_history = self.state_history.copy()
         return new_state
 
     def get_legal_moves(self):
@@ -49,7 +51,13 @@ class AtaxxState:
                                 clone_destinations.add((nr, nc))  
         return moves
 
+    def get_state_hash(self):
+        return hash((self.board.tobytes(), self.current_player))
+
     def make_move(self, move):
+        current_hash = self.get_state_hash()
+        self.state_history.append(current_hash)
+        
         r, c, nr, nc = move
         is_clone = abs(r - nr) <= 1 and abs(c - nc) <= 1
         self.board[nr][nc] = self.current_player
@@ -68,11 +76,36 @@ class AtaxxState:
         self.current_player = -self.current_player
 
     def is_game_over(self):
-        return np.sum(self.board == EMPTY) == 0 or self.get_player_cells(PLAYER_1) == 0 or self.get_player_cells(PLAYER_2) == 0
+        if (np.sum(self.board == EMPTY) == 0 or 
+            self.get_player_cells(PLAYER_1) == 0 or 
+            self.get_player_cells(PLAYER_2) == 0):
+            return True
+        
+        current_hash = self.get_state_hash()
+        repetition_count = self.state_history.count(current_hash)
+        
+        if repetition_count >= 3:
+            return True
+            
+        return False
+
+    def is_threefold_repetition(self):
+        current_hash = self.get_state_hash()
+        repetition_count = self.state_history.count(current_hash)
+        return repetition_count >= 3
+
+    def get_repetition_count(self):
+        current_hash = self.get_state_hash()
+        return self.state_history.count(current_hash)
 
     def get_winner(self):
         if not self.is_game_over():
             return 0
+        
+        current_hash = self.get_state_hash()
+        repetition_count = self.state_history.count(current_hash)
+        if repetition_count >= 3:
+            return 0  
         
         own = np.sum(self.board == PLAYER_1)
         opp = np.sum(self.board == PLAYER_2)
@@ -134,3 +167,9 @@ class AtaxxState:
         
         player_color = COLORS['X'] if self.current_player == PLAYER_1 else COLORS['O']
         print(f"Current player: {player_color}{'X' if self.current_player == PLAYER_1 else 'O'}{COLORS['reset']}")
+        
+        repetition_count = self.get_repetition_count()
+        if repetition_count > 0:
+            print(f"State repetition count: {repetition_count}/3")
+            if repetition_count >= 3:
+                print(f"{COLORS['border']}🔄 DRAW: 3-fold repetition detected!{COLORS['reset']}")
