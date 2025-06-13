@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Tournament Runner for Ataxx Game
-Handles tournament logic, game execution, and result management
-"""
 
 import asyncio
 import argparse
@@ -13,11 +9,11 @@ import os
 from datetime import datetime
 
 from ataxx_state import AtaxxState
-# from initial_maps import get_initial_board
 from minimax_agent import MinimaxAgent
 from mcts_agent import MCTSAgent
 from mcts_domain_agent import MCTSDomainAgent
 from ab_mcts_domain_agent import ABMCTSDomainAgent
+from move_scores import move_score_manager
 
 
 class TournamentRunner:
@@ -26,26 +22,22 @@ class TournamentRunner:
                  delay=0.5, first_player="W", use_tournament=False,
                  transition_threshold=13, depths=4):
         
-        # Tournament settings
         self.map_file = map_file
         self.games_per_match = games_per_match
         self.iterations = iterations
         self.algo1 = algo1
         self.algo2 = algo2
         self.delay = delay
-        self.first_player = 1 if first_player == "B" else -1  # B=1(X), W=-1(O)
+        self.first_player = 1 if first_player == "B" else -1
         self.use_tournament = use_tournament
         self.transition_threshold = transition_threshold
         self.depths = depths
         
-        # Game state
         self.running = True
         self.paused = False
         
-        # Initialize board and agents
         self.setup_game()
         
-        # Results tracking
         self.results = {name: {"wins": 0, "losses": 0, "draws": 0, "avg_pieces": 0, "games_played": 0} 
                        for name in [self.algo1, self.algo2]}
         
@@ -56,23 +48,17 @@ class TournamentRunner:
         print(f"   Agents: {self.algo1} vs {self.algo2}")
 
     def setup_game(self):
-        """Initialize game board and agents"""
-        # Load map
-        self.available_maps = []
         map_dir = "map"
         if os.path.exists(map_dir):
             self.available_maps = [f for f in os.listdir(map_dir) if f.endswith('.txt')]
         
-        # Set initial board
         if self.map_file and self.map_file in self.available_maps:
             self.initial_board = self.load_map_from_file(self.map_file)
             print(f"📍 Loaded map: {self.map_file}")
         else:
-            # Use default board if no map file specified or file not found
             self.initial_board = self.get_default_board()
             print("📍 Using default map")
         
-        # Initialize agents
         self.agents = {}
         
         for algo_name in [self.algo1, self.algo2]:
@@ -80,12 +66,6 @@ class TournamentRunner:
                 self.agents[algo_name] = MinimaxAgent(max_depth=self.depths)
             elif algo_name == "MCTS":
                 self.agents[algo_name] = MCTSAgent(iterations=self.iterations)
-            elif "MCTS_Domain" in algo_name:
-                iter_count = int(algo_name.split('_')[-1]) if '_' in algo_name else self.iterations
-                self.agents[algo_name] = MCTSDomainAgent(
-                    iterations=iter_count, 
-                    tournament=self.use_tournament
-                )
             elif "AB+MCTS_Domain" in algo_name:
                 iter_count = int(algo_name.split('_')[-1]) if '_' in algo_name else self.iterations
                 self.agents[algo_name] = ABMCTSDomainAgent(
@@ -94,27 +74,30 @@ class TournamentRunner:
                     ab_depth=self.depths,
                     tournament=self.use_tournament
                 )
+            elif "MCTS_Domain" in algo_name:
+                iter_count = int(algo_name.split('_')[-1]) if '_' in algo_name else self.iterations
+                self.agents[algo_name] = MCTSDomainAgent(
+                    iterations=iter_count, 
+                    tournament=self.use_tournament
+                )
             else:
                 raise ValueError(f"Unknown algorithm: {algo_name}")
 
     def load_map_from_file(self, filename):
-        """Load and parse map from file in map/ directory"""
         try:
             map_path = os.path.join("map", filename)
             with open(map_path, 'r') as f:
                 lines = [line.strip() for line in f.readlines()]
             
-            # Convert map file to numpy board
             board = np.zeros((7, 7), dtype=int)
-            for r, line in enumerate(lines[:7]):  # Only take first 7 lines
-                for c, char in enumerate(line.strip()[:7]):  # Only take first 7 characters
+            for r, line in enumerate(lines[:7]):
+                for c, char in enumerate(line.strip()[:7]):
                     if char == 'B':
-                        board[r][c] = 1  # Black piece (X)
+                        board[r][c] = 1
                     elif char == 'W':
-                        board[r][c] = -1  # White piece (O)
+                        board[r][c] = -1
                     elif char == '#':
-                        board[r][c] = 0  # Blocked cell
-                    # Empty cells remain 0
+                        board[r][c] = 0
             
             return board
             
@@ -127,42 +110,23 @@ class TournamentRunner:
     
     def get_default_board(self):
         """Create default Ataxx board layout"""
-        # Standard Ataxx starting position
         board = np.zeros((7, 7), dtype=int)
-        
-        # Place initial pieces
-        # White pieces (O, value -1) at corners
-        board[0, 0] = -1  # Top-left
-        board[0, 6] = -1  # Top-right
-        board[6, 0] = -1  # Bottom-left
-        board[6, 6] = -1  # Bottom-right
-        
-        # Black pieces (X, value 1) at opposite corners  
-        board[0, 6] = 1   # Top-right
-        board[6, 0] = 1   # Bottom-left
-        
-        # Actually, standard Ataxx has:
-        # Black at (0,0) and (6,6)
-        # White at (0,6) and (6,0)
-        board = np.zeros((7, 7), dtype=int)
-        board[0, 0] = 1   # Black (X)
-        board[6, 6] = 1   # Black (X)
-        board[0, 6] = -1  # White (O)
-        board[6, 0] = -1  # White (O)
+        board[0, 0] = 1   
+        board[6, 6] = 1   
+        board[0, 6] = -1  
+        board[6, 0] = -1  
         
         return board
 
     async def play_game(self, agent1_name, agent2_name, forward=True):
         """Play a single game between two agents"""
+        move_score_manager.clear_scores()
         state = AtaxxState(initial_board=self.initial_board, current_player=self.first_player)
         
-        # Set current player names for display
         if forward:
-            # Forward game: agent1 plays X (Red), agent2 plays O (Blue)
             current_x_player = agent1_name
             current_o_player = agent2_name
         else:
-            # Reverse game: agent2 plays X (Red), agent1 plays O (Blue)
             current_x_player = agent2_name
             current_o_player = agent1_name
         
@@ -175,7 +139,6 @@ class TournamentRunner:
         print(f"\nGame ({'Forward' if forward else 'Reverse'}) on {map_name}")
         print(f"X (Red): {current_x_player} | O (Blue): {current_o_player}")
         
-        # Display initial board
         print(f"\nInitial board:")
         state.display_board()
         
@@ -201,14 +164,18 @@ class TournamentRunner:
                 state.current_player = -state.current_player
                 continue
             
-            # Determine which agent should play based on current player and game direction
-            if state.current_player == 1:  # X player (Red)
+            if state.current_player == 1: 
                 current_agent_name = current_x_player
-            else:  # O player (Blue)
+            else:  
                 current_agent_name = current_o_player
             
             agent = self.agents[current_agent_name]
-            move = agent.get_move(state)
+            
+            move_score_manager.enable_score_collection(current_agent_name)
+            try:
+                move = agent.get_move(state)
+            finally:
+                move_score_manager.disable_score_collection()
 
             if not self.running:
                 return None
@@ -223,7 +190,6 @@ class TournamentRunner:
                 state.make_move(move)
                 move_count += 1
                 
-                # Display board after move
                 print(f"\nBoard after move {move_count}:")
                 state.display_board()
                 
@@ -231,7 +197,6 @@ class TournamentRunner:
                 o_pieces = np.sum(state.board == -1)
                 print(f"Pieces - X: {x_pieces}, O: {o_pieces}")
                 
-                # Add delay if specified
                 if self.delay > 0:
                     await asyncio.sleep(self.delay)
             else:
@@ -243,24 +208,21 @@ class TournamentRunner:
             
         winner = state.get_winner()
         
-        # Calculate pieces correctly for each agent
-        x_agent = current_x_player  # Agent playing as X (Red)
-        o_agent = current_o_player  # Agent playing as O (Blue)
+        x_agent = current_x_player  
+        o_agent = current_o_player
         
-        # Update pieces and games played for each agent
         self.results[x_agent]["avg_pieces"] += x_pieces
         self.results[o_agent]["avg_pieces"] += o_pieces
         self.results[x_agent]["games_played"] += 1
         self.results[o_agent]["games_played"] += 1
         
-        # Update win/loss records correctly based on actual winner
-        if winner == 1:  # X wins
+        if winner == 1:  
             winner_name = x_agent
             loser_name = o_agent
             self.results[x_agent]["wins"] += 1
             self.results[o_agent]["losses"] += 1
             print(f"Winner: {winner_name} (X)")
-        elif winner == -1:  # O wins
+        elif winner == -1:  
             winner_name = o_agent
             loser_name = x_agent
             self.results[o_agent]["wins"] += 1
@@ -273,6 +235,8 @@ class TournamentRunner:
             loser_name = None
             print("Draw")
         
+        move_score_manager.clear_scores()
+
         return {
             'winner': winner,
             'winner_name': winner_name,
@@ -284,19 +248,19 @@ class TournamentRunner:
 
     async def run_tournament(self):
         """Run complete tournament"""
+        move_score_manager.clear_scores()
         print(f"\n🏆 Starting Tournament: {self.algo1} vs {self.algo2}")
         print(f"📋 {self.games_per_match} games each way (total: {self.games_per_match * 2} games)")
         
-        # Reset results at start of tournament
         self.results = {name: {"wins": 0, "losses": 0, "draws": 0, "avg_pieces": 0, "games_played": 0} 
                        for name in [self.algo1, self.algo2]}
         
-        # Round 1: algo1 as X, algo2 as O
         print(f"\n🔴 Round 1: {self.algo1} (X) vs {self.algo2} (O)")
         for game_num in range(self.games_per_match):
             if not self.running:
                 break
             print(f"Game {game_num + 1}/{self.games_per_match}")
+            move_score_manager.clear_scores()
             result = await self.play_game(self.algo1, self.algo2, forward=True)
             if not self.running or result is None:
                 break
@@ -304,12 +268,12 @@ class TournamentRunner:
         if not self.running:
             return
                 
-        # Round 2: algo2 as X, algo1 as O  
         print(f"\n🔵 Round 2: {self.algo2} (X) vs {self.algo1} (O)")
         for game_num in range(self.games_per_match):
             if not self.running:
                 break
             print(f"Game {game_num + 1}/{self.games_per_match}")
+            move_score_manager.clear_scores()
             result = await self.play_game(self.algo1, self.algo2, forward=False)
             if not self.running or result is None:
                 break
@@ -319,10 +283,8 @@ class TournamentRunner:
                 
         print(f"\n🏁 Tournament Results ({self.algo1} vs {self.algo2}):")
         
-        # Validate results
         self.validate_results()
         
-        # Print results
         for name in self.results:
             if self.results[name]["games_played"] > 0:
                 wins = self.results[name]['wins']
@@ -336,7 +298,7 @@ class TournamentRunner:
                              f"({win_rate:.1f}% win rate, {avg_pieces:.2f} avg pieces)")
                 print(f"  {result_text}")
         
-        # Save results
+        move_score_manager.clear_scores()
         self.save_results()
 
     def validate_results(self):

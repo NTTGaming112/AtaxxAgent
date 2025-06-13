@@ -3,11 +3,15 @@ import numpy as np
 from heuristics import evaluate, heuristic
 from constants import DEFAULT_MCTS_DOMAIN_ITERATIONS
 from mcts_agent import MCTSNode
+from move_scores import move_score_manager
 import math
 
 class MCTSDomainNode(MCTSNode):
     def __init__(self, state, parent=None, move=None):
         super().__init__(state, parent, move)
+    
+    def select_child(self):
+        return super().select_child()
 
     def heuristic_expand(self): 
         if not self.untried_moves:
@@ -21,7 +25,6 @@ class MCTSDomainNode(MCTSNode):
         next_state.make_move(move)
         child = MCTSDomainNode(state=next_state, parent=self, move=move)
         self.children.append(child)
-
         return child
     
     
@@ -135,12 +138,6 @@ class MCTSDomainNode(MCTSNode):
                 total_score += score
                 scores_list.append(score)
                 simulations_run += 1
-                
-                if sim_idx >= 15 and len(scores_list) > 1:
-                    variance = np.var(scores_list)
-                    std_error = math.sqrt(variance / len(scores_list))
-                    if std_error < 0.1:
-                        break
             
             avg_score = total_score / simulations_run if simulations_run > 0 else 0
             move_scores_r3.append((move, avg_score, simulations_run))
@@ -165,52 +162,38 @@ class MCTSDomainAgent:
         self.tournament = tournament
 
     def get_move(self, state):
-        root = MCTSDomainNode(state)
+        self.root = MCTSDomainNode(state)
         root_player = state.current_player
         
-        best_move_history = []
-        convergence_threshold = 5 
-        
         for iteration in range(self.iterations_per_round):
-            node = root
-            
+            node = self._select(self.root)
             if node.untried_moves:
                 node = node.heuristic_expand()
-
             if self.tournament:
                 result = node.tournament_rollout(root_player, self.tournament_params)
             else:
                 result = node.heuristic_rollout(root_player)
-
             node.backpropagate(result, root_player)
-            
-            if iteration >= 10:  
-                current_best = max(root.children, 
-                                key=lambda c: c.wins / c.visits if c.visits > 0 else 0)
-                best_move_history.append(current_best.move)
-                
-                if len(best_move_history) > convergence_threshold:
-                    best_move_history.pop(0)
-                
-                if len(best_move_history) == convergence_threshold:
-                    if all(move == best_move_history[0] for move in best_move_history):
-                        confidence = current_best.wins / current_best.visits
-                        if confidence > 0.7: 
-                            break
-                
-                if len(root.children) > 1:
-                    sorted_children = sorted(root.children, 
-                                        key=lambda c: c.wins / c.visits if c.visits > 0 else 0, 
-                                        reverse=True)
-                    if len(sorted_children) >= 2:
-                        best_rate = sorted_children[0].wins / sorted_children[0].visits if sorted_children[0].visits > 0 else 0
-                        second_rate = sorted_children[1].wins / sorted_children[1].visits if sorted_children[1].visits > 0 else 0
-                        
-                        if (best_rate - second_rate > 0.3 and 
-                            sorted_children[0].visits > 20 and 
-                            iteration > 15):
-                            break
 
-        if not root.children:
+        if not self.root.children:
             return None
-        return max(root.children, key=lambda c: c.wins / c.visits if c.visits > 0 else 0).move
+        
+        best_move = max(self.root.children, key=lambda c: c.wins / c.visits if c.visits > 0 else 0).move
+        
+        if move_score_manager.is_enabled():
+            move_scores = {}
+            for child in self.root.children:
+                if child.visits > 0:
+                    win_rate = child.wins / child.visits
+                    move_scores[child.move] = win_rate
+            move_score_manager.store_move_scores(move_scores, "MCTS_Domain")
+
+        return best_move
+    
+    def _select(self, node):
+        while node.untried_moves == [] and node.children:
+            child = node.select_child()
+            if child is None:
+                break
+            node = child
+        return node

@@ -122,16 +122,12 @@ class AtaxxState:
         return np.sum(self.board == EMPTY) == 0
     
     def count_stones(self, player):
-        if player not in (PLAYER_1, PLAYER_2):
-            raise ValueError("Invalid player. Use PLAYER_1 or PLAYER_2.")
         return np.sum(self.board == player)
     
     def get_empty_cells(self):
         return np.sum(self.board == EMPTY)
     
     def get_player_cells(self, player):
-        if player not in (PLAYER_1, PLAYER_2):
-            raise ValueError("Invalid player. Use PLAYER_1 or PLAYER_2.")
         return np.sum(self.board == player)
 
     def display_board(self):

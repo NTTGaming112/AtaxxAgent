@@ -2,6 +2,7 @@ import math
 import random
 from heuristics import evaluate
 from constants import DEFAULT_MCTS_ITERATIONS
+from move_scores import move_score_manager
 
 class MCTSNode:
     def __init__(self, state, parent=None, move=None):
@@ -27,6 +28,8 @@ class MCTSNode:
 
     def expand(self):
         move = random.choice(self.untried_moves)
+        self.untried_moves.remove(move)
+
         next_state = self.state.copy()
         next_state.make_move(move)
         child = MCTSNode(state=next_state, parent=self, move=move)
@@ -72,7 +75,18 @@ class MCTSAgent:
 
         if not self.root.children:
             return None
-        return max(self.root.children, key=lambda c: c.wins / c.visits if c.visits > 0 else 0).move
+        
+        best_move = max(self.root.children, key=lambda c: c.wins / c.visits if c.visits > 0 else 0).move
+        
+        if move_score_manager.is_enabled():
+            move_scores = {}
+            for child in self.root.children:
+                if child.visits > 0:
+                    win_rate = child.wins / child.visits
+                    move_scores[child.move] = win_rate
+            move_score_manager.store_move_scores(move_scores, "MCTS")
+
+        return best_move
 
     def _select(self, node):
         while node.untried_moves == [] and node.children:
