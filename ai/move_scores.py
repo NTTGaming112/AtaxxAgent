@@ -20,7 +20,6 @@ class MoveScoreManager:
     def disable_score_collection(self):
         with self._lock:
             self._enabled = False
-            self._agent_name = ""
     
     def is_enabled(self) -> bool:
         with self._lock:
